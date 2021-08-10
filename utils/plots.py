@@ -68,6 +68,10 @@ def butter_lowpass_filtfilt(data, cutoff=1500, fs=50000, order=5):
 def plot_one_box(x, angle, im, color=(128, 128, 128), label=None, line_thickness=3):
     # Plots one bounding box on image 'im' using OpenCV
     assert im.data.contiguous, 'Image not contiguous. Apply np.ascontiguousarray(im) to plot_on_box() input image.'
+    if torch.is_tensor(x):
+        x = x.cpu().numpy().tolist()
+    if torch.is_tensor(angle):
+        angle = angle.cpu().numpy().tolist()
     tl = line_thickness or round(0.002 * (im.shape[0] + im.shape[1]) / 2) + 1  # line/font thickness
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cx = int((x[0] + x[2]) / 2)

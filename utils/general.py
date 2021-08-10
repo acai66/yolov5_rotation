@@ -570,8 +570,6 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
             conf, j = x[:, 5:5+nc].max(1, keepdim=True)
             conf_angle, j_angle = x[:, 5+nc:].max(1, keepdim=True)
             x = torch.cat((box, conf, j.float(), j_angle.float()), 1)[conf.view(-1) > conf_thres]
-            xy = xy[i]
-            wh = wh[i]
 
         # Filter by class
         if classes is not None:
