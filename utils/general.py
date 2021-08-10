@@ -606,7 +606,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         # i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
         
         i = cv2.dnn.NMSBoxesRotated(boxes_for_cv2_nms, scores_for_cv2_nms, conf_thres, iou_thres)
-        i = np.squeeze(i)
+        i = np.squeeze(i, axis=-1)
         
         if i.shape[0] > max_det:  # limit detections
             i = i[:max_det]
