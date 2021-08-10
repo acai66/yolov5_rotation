@@ -13,6 +13,7 @@ from threading import Thread
 
 import numpy as np
 import torch
+import cv2
 from tqdm import tqdm
 
 FILE = Path(__file__).absolute()
@@ -22,7 +23,7 @@ from models.experimental import attempt_load
 from utils.datasets import create_dataloader
 from utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, check_requirements, \
     box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
-from utils.metrics import ap_per_class, ConfusionMatrix
+from utils.metrics import ap_per_class, ConfusionMatrix, rotate_box_iou
 from utils.plots import plot_images, output_to_target, plot_study_txt
 from utils.torch_utils import select_device, time_sync
 from utils.callbacks import Callbacks
@@ -54,13 +55,19 @@ def process_batch(detections, labels, iouv):
     """
     Return correct predictions matrix. Both sets of boxes are in (x1, y1, x2, y2) format.
     Arguments:
-        detections (Array[N, 6]), x1, y1, x2, y2, conf, class
-        labels (Array[M, 5]), class, x1, y1, x2, y2
+        detections (Array[N, 7]), x1, y1, x2, y2, conf, class, angle
+        labels (Array[M, 6]), class, x, y, w, h, angle
     Returns:
         correct (Array[N, 10]), for 10 IoU levels
     """
     correct = torch.zeros(detections.shape[0], iouv.shape[0], dtype=torch.bool, device=iouv.device)
-    iou = box_iou(labels[:, 1:], detections[:, :4])
+    detections[:, :4] = xyxy2xywh(detections[:, :4])
+    # labels[:, 1:5] = xyxy2xywh(labels[:, 1:5])
+    boxes1 = torch.cat([detections[:, :4], detections[:, 6].view((-1, 1))], 1)
+    boxes2 = torch.cat([labels[:, 1:5], labels[:, 5].view((-1, 1))], 1)
+    iou = rotate_box_iou(boxes2.cpu().numpy(), boxes1.cpu().numpy())
+    # iou = box_iou(labels[:, 1:5], detections[:, :4])
+    iou = torch.from_numpy(iou).to(detections.device)
     x = torch.where((iou >= iouv[0]) & (labels[:, 0:1] == detections[:, 5]))  # IoU above threshold and classes match
     if x[0].shape[0]:
         matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()  # [label, detection, iou]
@@ -151,7 +158,7 @@ def run(data,
     class_map = coco80_to_coco91_class() if is_coco else list(range(1000))
     s = ('%20s' + '%11s' * 6) % ('Class', 'Images', 'Labels', 'P', 'R', 'mAP@.5', 'mAP@.5:.95')
     p, r, f1, mp, mr, map50, map, t0, t1, t2 = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
-    loss = torch.zeros(3, device=device)
+    loss = torch.zeros(4, device=device)
     jdict, stats, ap, ap_class = [], [], [], []
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
         t_ = time_sync()
@@ -169,10 +176,10 @@ def run(data,
 
         # Compute loss
         if compute_loss:
-            loss += compute_loss([x.float() for x in train_out], targets)[1]  # box, obj, cls
+            loss += compute_loss([x.float() for x in train_out], targets)[1]  # box, obj, cls, angle
 
         # Run NMS
-        targets[:, 2:] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels
+        targets[:, 2:6] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels
         lb = [targets[targets[:, 0] == i, 1:] for i in range(nb)] if save_hybrid else []  # for autolabelling
         t = time_sync()
         out = non_max_suppression(out, conf_thres, iou_thres, labels=lb, multi_label=True, agnostic=single_cls)
@@ -201,7 +208,7 @@ def run(data,
             if nl:
                 tbox = xywh2xyxy(labels[:, 1:5])  # target boxes
                 scale_coords(img[si].shape[1:], tbox, shape, shapes[si][1])  # native-space labels
-                labelsn = torch.cat((labels[:, 0:1], tbox), 1)  # native-space labels
+                labelsn = torch.cat((labels[:, 0:1], xyxy2xywh(tbox), labels[:, 5:6]), 1)  # native-space labels
                 correct = process_batch(predn, labelsn, iouv)
                 if plots:
                     confusion_matrix.process_batch(predn, labelsn)

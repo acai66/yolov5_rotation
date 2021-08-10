@@ -65,12 +65,19 @@ def butter_lowpass_filtfilt(data, cutoff=1500, fs=50000, order=5):
     return filtfilt(b, a, data)  # forward-backward filter
 
 
-def plot_one_box(x, im, color=(128, 128, 128), label=None, line_thickness=3):
+def plot_one_box(x, angle, im, color=(128, 128, 128), label=None, line_thickness=3):
     # Plots one bounding box on image 'im' using OpenCV
     assert im.data.contiguous, 'Image not contiguous. Apply np.ascontiguousarray(im) to plot_on_box() input image.'
     tl = line_thickness or round(0.002 * (im.shape[0] + im.shape[1]) / 2) + 1  # line/font thickness
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
-    cv2.rectangle(im, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
+    cx = int((x[0] + x[2]) / 2)
+    cy = int((x[1] + x[3]) / 2)
+    w = int(x[2] - x[0])
+    h = int(x[3] - x[1])
+    rect = ((cx, cy), (w, h), angle)
+    box = cv2.boxPoints(rect)
+    box = np.int0(box)
+    cv2.drawContours(im, contours=[box], contourIdx=-1, color=color, thickness=tl, lineType=cv2.LINE_AA)
     if label:
         tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
@@ -117,8 +124,8 @@ def output_to_target(output):
     # Convert model output to target format [batch_id, class_id, x, y, w, h, conf]
     targets = []
     for i, o in enumerate(output):
-        for *box, conf, cls in o.cpu().numpy():
-            targets.append([i, cls, *list(*xyxy2xywh(np.array(box)[None])), conf])
+        for *box, conf, cls, angle in o.cpu().numpy():
+            targets.append([i, cls, *list(*xyxy2xywh(np.array(box)[None])), conf, angle])
     return np.array(targets)
 
 
@@ -163,7 +170,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
             image_targets = targets[targets[:, 0] == i]
             boxes = xywh2xyxy(image_targets[:, 2:6]).T
             classes = image_targets[:, 1].astype('int')
-            labels = image_targets.shape[1] == 6  # labels if no conf column
+            labels = image_targets.shape[1] == 7  # labels if no conf column
             conf = None if labels else image_targets[:, 6]  # check for confidence presence (label vs pred)
 
             if boxes.shape[1]:
@@ -178,9 +185,10 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
                 cls = int(classes[j])
                 color = colors(cls)
                 cls = names[cls] if names else cls
+                angle = image_targets[j, -1]
                 if labels or conf[j] > 0.25:  # 0.25 conf thresh
                     label = '%s' % cls if labels else '%s %.1f' % (cls, conf[j])
-                    plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl)
+                    plot_one_box(box, angle, mosaic, label=label, color=color, line_thickness=tl)
 
         # Draw image filename labels
         if paths:
@@ -284,7 +292,7 @@ def plot_study_txt(path='', x=None):  # from utils.plots import *; plot_study_tx
 def plot_labels(labels, names=(), save_dir=Path('')):
     # plot dataset labels
     print('Plotting labels... ')
-    c, b = labels[:, 0], labels[:, 1:].transpose()  # classes, boxes
+    c, b = labels[:, 0], labels[:, 1:5].transpose()  # classes, boxes
     nc = int(c.max() + 1)  # number of classes
     x = pd.DataFrame(b.transpose(), columns=['x', 'y', 'width', 'height'])
 
@@ -309,9 +317,9 @@ def plot_labels(labels, names=(), save_dir=Path('')):
 
     # rectangles
     labels[:, 1:3] = 0.5  # center
-    labels[:, 1:] = xywh2xyxy(labels[:, 1:]) * 2000
+    labels[:, 1:5] = xywh2xyxy(labels[:, 1:5]) * 2000
     img = Image.fromarray(np.ones((2000, 2000, 3), dtype=np.uint8) * 255)
-    for cls, *box in labels[:1000]:
+    for cls, *box in labels[:1000, :5]:
         ImageDraw.Draw(img).rectangle(box, width=1, outline=colors(cls))  # plot
     ax[1].imshow(img)
     ax[1].axis('off')

@@ -20,6 +20,8 @@ cls: 0.243
 cls_pw: 0.631
 obj: 0.301
 obj_pw: 0.911
+angle: 0.266
+angle_pw: 0.333  # angle BCELoss positive_weight
 iou_t: 0.2
 anchor_t: 2.91
 # anchors: 3.63

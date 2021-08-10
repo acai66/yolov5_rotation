@@ -6,6 +6,7 @@ from pathlib import Path
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 import torch
 
 
@@ -106,6 +107,16 @@ def compute_ap(recall, precision):
     return ap, mpre, mrec
 
 
+def xyxy2xywh(x):
+    # Convert nx4 boxes from [x1, y1, x2, y2] to [x, y, w, h] where xy1=top-left, xy2=bottom-right
+    y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
+    y[:, 0] = (x[:, 0] + x[:, 2]) / 2  # x center
+    y[:, 1] = (x[:, 1] + x[:, 3]) / 2  # y center
+    y[:, 2] = x[:, 2] - x[:, 0]  # width
+    y[:, 3] = x[:, 3] - x[:, 1]  # height
+    return y
+
+
 class ConfusionMatrix:
     # Updated version of https://github.com/kaanakan/object_detection_confusion_matrix
     def __init__(self, nc, conf=0.25, iou_thres=0.45):
@@ -119,15 +130,16 @@ class ConfusionMatrix:
         Return intersection-over-union (Jaccard index) of boxes.
         Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
         Arguments:
-            detections (Array[N, 6]), x1, y1, x2, y2, conf, class
-            labels (Array[M, 5]), class, x1, y1, x2, y2
+            detections (Array[N, 7]), x1, y1, x2, y2, conf, class, angle
+            labels (Array[M, 6]), class, x, y, w, h, angle
         Returns:
             None, updates confusion matrix accordingly
         """
         detections = detections[detections[:, 4] > self.conf]
         gt_classes = labels[:, 0].int()
         detection_classes = detections[:, 5].int()
-        iou = box_iou(labels[:, 1:], detections[:, :4])
+        detections[:, :4] = xyxy2xywh(detections[:, :4])
+        iou = box_iou(labels[:, 1:5], detections[:, :4])
 
         x = torch.where(iou > self.iou_thres)
         if x[0].shape[0]:
@@ -251,6 +263,32 @@ def box_iou(box1, box2):
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
     inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
     return inter / (area1[:, None] + area2 - inter)  # iou = inter / (area1 + area2 - inter)
+
+
+
+# 中心点 矩形的w h, 旋转的theta（角度，不是弧度）
+def rotate_box_iou(boxes1, boxes2):
+    area1 = boxes1[:, 2] * boxes1[:, 3]
+    area2 = boxes2[:, 2] * boxes2[:, 3]
+    ious = []
+    for i, box1 in enumerate(boxes1):
+        temp_ious = []
+        r1 = ((box1[0], box1[1]), (box1[2], box1[3]), box1[4])
+        for j, box2 in enumerate(boxes2):
+            r2 = ((box2[0], box2[1]), (box2[2], box2[3]), box2[4])
+
+            int_pts = cv2.rotatedRectangleIntersection(r1, r2)[1]
+            if int_pts is not None:
+                order_pts = cv2.convexHull(int_pts, returnPoints=True)
+
+                int_area = cv2.contourArea(order_pts)
+
+                inter = int_area * 1.0 / (area1[i] + area2[j] - int_area)
+                temp_ious.append(inter)
+            else:
+                temp_ious.append(0.0)
+        ious.append(temp_ious)
+    return np.array(ious, dtype=np.float32)
 
 
 def bbox_ioa(box1, box2, eps=1E-7):
