@@ -569,11 +569,17 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         else:  # best class only
             conf, j = x[:, 5:5+nc].max(1, keepdim=True)
             conf_angle, j_angle = x[:, 5+nc:].max(1, keepdim=True)
-            x = torch.cat((box, conf, j.float(), j_angle.float()), 1)[conf.view(-1) > conf_thres]
+            inds = conf.view(-1) > conf_thres
+            x = torch.cat((box, conf, j.float(), j_angle.float()), 1)[inds]
+            xy = xy[inds]
+            wh = wh[inds]
 
         # Filter by class
         if classes is not None:
-            x = x[(x[:, 5:6] == torch.tensor(classes, device=x.device)).any(1)]
+            inds = (x[:, 5:6] == torch.tensor(classes, device=x.device)).any(1)
+            x = x[inds]
+            xy = xy[inds]
+            wh = wh[inds]
 
         # Apply finite constraint
         # if not torch.isfinite(x).all():
