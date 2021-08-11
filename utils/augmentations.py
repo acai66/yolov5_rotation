@@ -191,10 +191,21 @@ def random_perspective(im, targets=(), segments=(), degrees=10, translate=.1, sc
             x = xy[:, [0, 2, 4, 6]]
             y = xy[:, [1, 3, 5, 7]]
             new = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
-
+            new_center_x = (new[:, 0] + new[:, 2] ) / 2
+            new_center_y = (new[:, 1] + new[:, 3] ) / 2
+            new_w = new[:, 2] - new[:, 0]
+            new_h = new[:, 3] - new[:, 1]
+            
+            min_size = np.minimum(new_w, new_h)
+            pad = min_size * 0.25
+            keep = np.bitwise_and(new_center_x > pad, new_center_x < width - pad)
+            keep = np.bitwise_and(keep, new_center_y > pad)
+            keep = np.bitwise_and(keep, new_center_y < height - pad)
+            targets = targets[keep]
+            new = new[keep]
             # clip
-            new[:, [0, 2]] = new[:, [0, 2]].clip(0, width)
-            new[:, [1, 3]] = new[:, [1, 3]].clip(0, height)
+            #new[:, [0, 2]] = new[:, [0, 2]].clip(0, width)
+            #new[:, [1, 3]] = new[:, [1, 3]].clip(0, height)
 
         # filter candidates
         i = box_candidates(box1=targets[:, 1:5].T * s, box2=new.T, area_thr=0.01 if use_segments else 0.10)
