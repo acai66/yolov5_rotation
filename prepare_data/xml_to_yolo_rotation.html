@@ -14141,7 +14141,7 @@ a.anchor-link {
                     <span class="n">degree</span> <span class="o">=</span> <span class="n">degree</span> <span class="o">+</span> <span class="mi">90</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">degree</span> <span class="o">=</span> <span class="n">degree</span> <span class="o">-</span> <span class="mi">90</span>
-            <span class="n">cv_degree</span> <span class="o">=</span> <span class="mi">180</span> <span class="o">-</span> <span class="n">degree</span>     <span class="c1"># opencv angle format. opencv格式角度</span>
+            <span class="n">cv_degree</span> <span class="o">=</span> <span class="n">degree</span> <span class="c1"># 180 - degree     # opencv angle format. opencv格式角度</span>
             <span class="k">if</span> <span class="n">cv_degree</span> <span class="o">==</span> <span class="mi">180</span><span class="p">:</span>
                 <span class="n">cv_degree</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">assert</span> <span class="n">cv_degree</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">cv_degree</span> <span class="o">&lt;</span> <span class="mi">180</span>

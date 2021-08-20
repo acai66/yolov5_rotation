@@ -96,7 +96,7 @@ for file in tqdm(all_files):
                     degree = degree + 90
                 else:
                     degree = degree - 90
-            cv_degree = 180 - degree     # opencv angle format. opencv格式角度
+            cv_degree = degree # 180 - degree     # opencv angle format. opencv格式角度
             if cv_degree == 180:
                 cv_degree = 0
             assert cv_degree >= 0 and cv_degree < 180
