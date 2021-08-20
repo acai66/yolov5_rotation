@@ -101,7 +101,7 @@ for file in tqdm(all_files):
                 cv_degree = 0
             assert cv_degree >= 0 and cv_degree < 180
             
-            f.write('{} {} {} {} {} {}\n'.format(class_names[name], cx/width, cy/height, w/width, h/width, cv_degree))
+            f.write('{} {} {} {} {} {}\n'.format(class_names[name], cx/width, cy/height, w/width, h/height, cv_degree))
     # break
 
 
