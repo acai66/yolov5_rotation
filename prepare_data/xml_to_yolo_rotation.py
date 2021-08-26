@@ -88,6 +88,8 @@ for file in tqdm(all_files):
             w = float(rbb.find('w').text)
             h = float(rbb.find('h').text)
             angle = float(rbb.find('angle').text)
+            if angle > math.pi:
+                angle = angle - math.pi
             
             degree = round(angle / math.pi * 180)
             if h > w:     # swap w,h if w is not longside. 宽不是长边时，交换宽高
