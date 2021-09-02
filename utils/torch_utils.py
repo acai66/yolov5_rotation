@@ -1,7 +1,11 @@
-# YOLOv5 PyTorch utils
+# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+"""
+PyTorch utils
+"""
 
 import datetime
 import logging
+import math
 import os
 import platform
 import subprocess
@@ -10,7 +14,6 @@ from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 
-import math
 import torch
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
@@ -32,10 +35,10 @@ def torch_distributed_zero_first(local_rank: int):
     Decorator to make all processes in distributed training wait for each local_master to do something.
     """
     if local_rank not in [-1, 0]:
-        dist.barrier()
+        dist.barrier(device_ids=[local_rank])
     yield
     if local_rank == 0:
-        dist.barrier()
+        dist.barrier(device_ids=[0])
 
 
 def init_torch_seeds(seed=0):
@@ -288,6 +291,23 @@ def copy_attr(a, b, include=(), exclude=()):
             continue
         else:
             setattr(a, k, v)
+
+
+class EarlyStopping:
+    # YOLOv5 simple early stopper
+    def __init__(self, patience=30):
+        self.best_fitness = 0.0  # i.e. mAP
+        self.best_epoch = 0
+        self.patience = patience  # epochs to wait after fitness stops improving to stop
+
+    def __call__(self, epoch, fitness):
+        if fitness >= self.best_fitness:  # >= 0 to allow for early zero-fitness stage of training
+            self.best_epoch = epoch
+            self.best_fitness = fitness
+        stop = (epoch - self.best_epoch) >= self.patience  # stop training if patience exceeded
+        if stop:
+            LOGGER.info(f'EarlyStopping patience {self.patience} exceeded, stopping training.')
+        return stop
 
 
 class ModelEMA:
