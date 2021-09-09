@@ -113,7 +113,6 @@ def gaussian_label(label, num_class, u=0, sig=4.0):
 class ComputeLoss:
     # Compute losses
     def __init__(self, model, autobalance=False):
-        super(ComputeLoss, self).__init__()
         self.sort_obj_iou = False
         device = next(model.parameters()).device  # get model device
         h = model.hyp  # hyperparameters

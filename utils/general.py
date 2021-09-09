@@ -103,6 +103,15 @@ def get_latest_run(search_dir='.'):
     return max(last_list, key=os.path.getctime) if last_list else ''
 
 
+def user_config_dir(dir='Ultralytics'):
+    # Return path of user configuration directory (make if necessary)
+    settings = {'Windows': 'AppData/Roaming', 'Linux': '.config', 'Darwin': 'Library/Application Support'}
+    path = Path.home() / settings.get(platform.system(), '') / dir
+    if not path.is_dir():
+        path.mkdir()  # make dir if required
+    return path
+
+
 def is_docker():
     # Is environment a Docker container?
     return Path('/workspace').exists()  # or Path('/.dockerenv').exists()
@@ -242,8 +251,23 @@ def check_imshow():
         return False
 
 
-def check_file(file):
+def check_suffix(file='yolov5s.pt', suffix=('.pt',), msg=''):
+    # Check file(s) for acceptable suffixes
+    if file and suffix:
+        if isinstance(suffix, str):
+            suffix = [suffix]
+        for f in file if isinstance(file, (list, tuple)) else [file]:
+            assert Path(f).suffix.lower() in suffix, f"{msg}{f} acceptable suffix is {suffix}"
+
+
+def check_yaml(file, suffix=('.yaml', '.yml')):
+    # Search/download YAML file (if necessary) and return path, checking suffix
+    return check_file(file, suffix)
+
+
+def check_file(file, suffix=''):
     # Search/download file (if necessary) and return path
+    check_suffix(file, suffix)  # optional
     file = str(file)  # convert to str()
     if Path(file).is_file() or file == '':  # exists
         return file
