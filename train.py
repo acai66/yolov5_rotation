@@ -278,6 +278,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         mloss = torch.zeros(4, device=device)  # mean losses
         if RANK != -1:
             train_loader.sampler.set_epoch(epoch)
+        if epochs - epoch <=  opt.end_mosaic:
+            train_loader.dataset.mosaic = False
+            # train_loader.dataset.augment = False
         pbar = enumerate(train_loader)
         LOGGER.info(('\n' + '%10s' * 8) % ('Epoch', 'gpu_mem', 'box', 'obj', 'cls', 'angle', 'labels', 'img_size'))
         if RANK in [-1, 0]:
@@ -464,6 +467,7 @@ def parse_opt(known=False):
     parser.add_argument('--freeze', type=int, default=0, help='Number of layers to freeze. backbone=10, all=24')
     parser.add_argument('--patience', type=int, default=100, help='EarlyStopping patience (epochs without improvement)')
     parser.add_argument('--begin_val', type=int, default=30, help='When will validation begin, default No.30 epoch')
+    parser.add_argument('--end_mosaic', type=int, default=0, help='When disable mosaic, default last 0 epochs')
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt
 
