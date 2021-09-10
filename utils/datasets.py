@@ -698,8 +698,8 @@ def load_mosaic(self, index):
 
     # Concat/clip labels
     labels4 = np.concatenate(labels4, 0)
-    for x in (labels4[:, 1:5], *segments4):
-        np.clip(x, 0, 2 * s, out=x)  # clip when using random_perspective()
+    # for x in (labels4[:, 1:5], *segments4):
+        # np.clip(x, 0, 2 * s, out=x)  # clip when using random_perspective()
     # img4, labels4 = replicate(img4, labels4)  # replicate
 
     # Augment
