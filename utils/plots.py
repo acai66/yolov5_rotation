@@ -114,6 +114,7 @@ class Annotator:
             c1, c2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
             cv2.drawContours(self.im, contours=[rotatedBox], contourIdx=-1, color=color, thickness=self.lw, lineType=cv2.LINE_AA)  # box
             if label:
+                p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
                 tf = max(self.lw - 1, 1)  # font thickness
                 w, h = cv2.getTextSize(label, 0, fontScale=self.lw / 3, thickness=tf)[0]  # text width, height
                 outside = p1[1] - h - 3 >= 0  # label fits outside box
