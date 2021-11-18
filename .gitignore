@@ -20,6 +20,7 @@
 *.data
 *.json
 *.cfg
+!setup.cfg
 !cfg/yolov3*.cfg
 
 storage.googleapis.com
@@ -45,9 +46,14 @@ VOC/
 # Neural Network weights -----------------------------------------------------------------------------------------------
 *.weights
 *.pt
+*.pb
 *.onnx
 *.mlmodel
 *.torchscript
+*.tflite
+*.h5
+*_saved_model/
+*_web_model/
 darknet53.conv.74
 yolov3-tiny.conv.15
 

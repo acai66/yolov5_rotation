@@ -3,10 +3,13 @@ from pathlib import Path
 
 import wandb
 
-FILE = Path(__file__).absolute()
-sys.path.append(FILE.parents[3].as_posix())  # add utils/ to path
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[3]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
 
-from train import train, parse_opt
+from train import parse_opt, train
+from utils.callbacks import Callbacks
 from utils.general import increment_path
 from utils.torch_utils import select_device
 
@@ -23,10 +26,15 @@ def sweep():
     opt.epochs = hyp_dict.get("epochs")
     opt.nosave = True
     opt.data = hyp_dict.get("data")
+    opt.weights = str(opt.weights)
+    opt.cfg = str(opt.cfg)
+    opt.data = str(opt.data)
+    opt.hyp = str(opt.hyp)
+    opt.project = str(opt.project)
     device = select_device(opt.device, batch_size=opt.batch_size)
 
     # train
-    train(hyp_dict, opt, device)
+    train(hyp_dict, opt, device, callbacks=Callbacks())
 
 
 if __name__ == "__main__":
